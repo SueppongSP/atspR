@@ -5,14 +5,23 @@
 
 #' Handle Missing Values
 #'
-#' Automatically chooses between **row deletion** (overall missing < 5%) and
-#' **imputation** (>= 5%).  When imputing, linear interpolation is the default;
+#' Automatically chooses between **imputation** and **row deletion** based on
+#' two criteria: dataset size (`n`) and overall missing rate.
+#'
+#' Decision rules:
+#' \itemize{
+#'   \item `n <= 50`                      -> always impute (data too small to lose rows)
+#'   \item `n > 50` and `missing > 5%`   -> impute
+#'   \item `n > 50` and `missing <= 5%`  -> drop rows with NA
+#' }
+#'
+#' When imputing, linear interpolation is the default;
 #' KNN imputation is available as an alternative.
 #'
-#' @param analysis_result The list returned by [missing_analysis()].
+#' @param analysis_result The list returned by [atspR::missing_analysis()].
 #'   Alternatively, pass a plain `data.frame` to `data`.
 #' @param data A `data.frame`.  Used only when `analysis_result` is `NULL`.
-#' @param method Character.  Imputation method when missing >= 5%:
+#' @param method Character.  Imputation method:
 #'   `"linear"` (default) or `"knn"`.
 #' @param knn_k Integer.  Number of neighbours for KNN (default 5).
 #' @param verbose Logical.  Print progress messages (default `TRUE`).
@@ -61,36 +70,37 @@ handle_missing <- function(analysis_result = NULL,
            dimnames = list(NULL, names(raw_data)))
   )
 
-  # -- Branch: drop vs impute ------------------------------------------------
-  if (overall_pct < 0.05) {
+  n_rows <- nrow(raw_data)
 
-    # -- Drop rows ------------------------------------------------------------
-    rows_before <- nrow(raw_data)
-    data_clean  <- raw_data[stats::complete.cases(raw_data), ]
-    n_dropped   <- rows_before - nrow(data_clean)
+  # -- Decision rule ---------------------------------------------------------
+  # n <= 50                              -> always impute (too small to lose rows)
+  # n > 50  and missing > 5%            -> impute
+  # 50 < n < 1000 and missing <= 5%     -> drop
+  # n >= 1000 and missing <= 5%         -> drop
+  do_impute <- (n_rows <= 50) || (overall_pct > 0.05)
 
-    action      <- "drop"
-    used_method <- "none"
-    n_imputed   <- 0L
-    report <- sprintf(
-      "Action: ROW DELETION  |  Removed %d rows (overall missing %.2f%% < 5%%)",
-      n_dropped, overall_pct * 100
-    )
-
-    if (verbose) {
-      .header("HANDLING MISSING VALUES")
-      cat(sprintf("  Overall missing = %.2f%% < 5%%\n", overall_pct * 100))
-      cat(sprintf("  Strategy        : DROP rows with any NA\n"))
-      cat(sprintf("  Rows removed    : %d  (%d -> %d)\n\n",
-                  n_dropped, rows_before, nrow(data_clean)))
-    }
-
+  # -- Reason string for verbose output --------------------------------------
+  decision_reason <- if (n_rows <= 50) {
+    sprintf("n = %d <= 50 -> always impute regardless of missing rate", n_rows)
+  } else if (overall_pct > 0.05) {
+    sprintf("n = %d > 50 and missing = %.2f%% > 5%% -> impute",
+            n_rows, overall_pct * 100)
+  } else if (n_rows < 1000) {
+    sprintf("50 < n = %d < 1000 and missing = %.2f%% <= 5%% -> drop rows",
+            n_rows, overall_pct * 100)
   } else {
+    sprintf("n = %d >= 1000 and missing = %.2f%% <= 5%% -> drop rows",
+            n_rows, overall_pct * 100)
+  }
 
-    # -- Impute ---------------------------------------------------------------
+  # -- Branch: impute --------------------------------------------------------
+  if (do_impute) {
+
     if (verbose) {
       .header("HANDLING MISSING VALUES")
-      cat(sprintf("  Overall missing = %.2f%% >= 5%%\n", overall_pct * 100))
+      cat(sprintf("  Rows            : %d\n", n_rows))
+      cat(sprintf("  Overall missing : %.2f%%\n", overall_pct * 100))
+      cat(sprintf("  Decision        : %s\n", decision_reason))
       cat(sprintf("  Strategy        : IMPUTATION (%s)\n\n", method))
     }
 
@@ -108,16 +118,41 @@ handle_missing <- function(analysis_result = NULL,
     action       <- "impute"
     used_method  <- method
     report <- sprintf(
-      "Action: IMPUTATION (%s)  |  %d cells imputed (overall missing %.2f%% >= 5%%)",
-      method, n_imputed, overall_pct * 100
+      "Action: IMPUTATION (%s)  |  %d cells imputed  |  %s",
+      method, n_imputed, decision_reason
     )
 
     if (verbose) {
-      cat(sprintf("  Action : IMPUTE (%s)  |  %d cells\n\n", used_method, n_imputed))
+      cat(sprintf("  Cells imputed : %d\n\n", n_imputed))
+    }
+
+    # -- Branch: drop ----------------------------------------------------------
+  } else {
+
+    rows_before <- n_rows
+    data_clean  <- raw_data[stats::complete.cases(raw_data), ]
+    n_dropped   <- rows_before - nrow(data_clean)
+
+    action      <- "drop"
+    used_method <- "none"
+    n_imputed   <- 0L
+    report <- sprintf(
+      "Action: ROW DELETION  |  Removed %d rows  |  %s",
+      n_dropped, decision_reason
+    )
+
+    if (verbose) {
+      .header("HANDLING MISSING VALUES")
+      cat(sprintf("  Rows            : %d\n", n_rows))
+      cat(sprintf("  Overall missing : %.2f%%\n", overall_pct * 100))
+      cat(sprintf("  Decision        : %s\n", decision_reason))
+      cat(sprintf("  Strategy        : DROP rows with any NA\n"))
+      cat(sprintf("  Rows removed    : %d  (%d -> %d)\n\n",
+                  n_dropped, rows_before, nrow(data_clean)))
     }
   }
 
-
+  if (verbose) cat("  ", report, "\n\n")
 
   invisible(list(
     data_clean   = data_clean,
