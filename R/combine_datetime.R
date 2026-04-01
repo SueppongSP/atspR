@@ -178,7 +178,7 @@ combine_datetime <- function(data,
                 ifelse(detected_auto, "(auto-detected)", "(user-supplied)")))
     cat(sprintf("  Time column : %s  (type: %s)\n", time_col, time_type))
     cat(sprintf("  New column  : %s  (tz: %s)\n",   new_col,  tz))
-    cat(sprintf("  Drop originals : %s\n\n",
+    cat(sprintf("  Remove originals : %s\n\n",
                 ifelse(drop_cols, "yes", "no")))
     cat("  Sample output:\n")
     print(utils::head(data[[new_col]], 5))
