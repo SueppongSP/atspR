@@ -14,7 +14,11 @@
 #' After filling gaps the result is ready to pass into
 #' [atspR::missing_analysis()] and [atspR::handle_missing()].
 #'
-#' @param data A `data.frame` with a timestamp column, sorted ascending.
+#' tsibble and tibble inputs are automatically converted to `data.frame`.
+#'
+#' @param data A `data.frame`, `tibble`, or `tsibble` with a timestamp column,
+#'   sorted ascending. tsibble and tibble are converted to `data.frame`
+#'   automatically.
 #' @param time_col Character. Name of the timestamp column
 #'   (must be `Date` or `POSIXct`). Use [atspR::combine_datetime()] first if
 #'   date and time are stored in separate columns.
@@ -76,6 +80,16 @@ fill_time_gaps <- function(data,
                            unit = c("sec", "min", "hour", "day",
                                     "month", "quarter", "year"),
                            verbose = TRUE) {
+
+  # -- Auto-convert tsibble / tibble -> data.frame ---------------------------
+  # tsibble does not support rbind() and must be converted before gap insertion
+  if (inherits(data, "tbl_ts")) {
+    if (verbose)
+      message("[INFO] tsibble detected -> converting to data.frame automatically.")
+    data <- as.data.frame(data)
+  } else if (inherits(data, c("tbl_df", "tbl"))) {
+    data <- as.data.frame(data)
+  }
 
   .check_df(data)
   unit <- match.arg(unit)
@@ -153,10 +167,10 @@ fill_time_gaps <- function(data,
     gap_df <- as.data.frame(
       lapply(val_cols, function(col) {
         x <- data[[col]]
-        if (is.integer(x))   return(rep(NA_integer_,  n_gaps))
-        if (is.numeric(x))   return(rep(NA_real_,     n_gaps))
-        if (is.character(x)) return(rep(NA_character_, n_gaps))
-        if (is.logical(x))   return(rep(NA,            n_gaps))
+        if (is.integer(x))   return(rep(NA_integer_,   n_gaps))
+        if (is.numeric(x))   return(rep(NA_real_,      n_gaps))
+        if (is.character(x)) return(rep(NA_character_,  n_gaps))
+        if (is.logical(x))   return(rep(NA,             n_gaps))
         if (is.factor(x))    return(factor(rep(NA, n_gaps), levels = levels(x)))
         rep(NA, n_gaps)
       }),
