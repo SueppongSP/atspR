@@ -103,7 +103,7 @@ Fold 3: train = seed + fold1+2    → val = fold3
 ## Export Results
 
 ```r
-export_pipeline(result, dir = "output", prefix = "atspR")
+ts_export(result, dir = "C:\Users\User\", prefix = "data")
 ```
 
 ## Citation
