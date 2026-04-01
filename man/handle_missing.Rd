@@ -18,7 +18,7 @@ Alternatively, pass a plain \code{data.frame} to \code{data}.}
 
 \item{data}{A \code{data.frame}.  Used only when \code{analysis_result} is \code{NULL}.}
 
-\item{method}{Character.  Imputation method when missing >= 5\%:
+\item{method}{Character.  Imputation method:
 \code{"linear"} (default) or \code{"knn"}.}
 
 \item{knn_k}{Integer.  Number of neighbours for KNN (default 5).}
@@ -38,8 +38,18 @@ An invisible list with elements:
 }
 }
 \description{
-Automatically chooses between \strong{row deletion} (overall missing < 5\%) and
-\strong{imputation} (>= 5\%).  When imputing, linear interpolation is the default;
+Automatically chooses between \strong{imputation} and \strong{row deletion} based on
+two criteria: dataset size (\code{n}) and overall missing rate.
+}
+\details{
+Decision rules:
+\itemize{
+\item \code{n <= 50}                      -> always impute (data too small to lose rows)
+\item \code{n > 50} and \verb{missing > 5\%}   -> impute
+\item \code{n > 50} and \verb{missing <= 5\%}  -> drop rows with NA
+}
+
+When imputing, linear interpolation is the default;
 KNN imputation is available as an alternative.
 }
 \examples{

@@ -8,20 +8,30 @@ fill_time_gaps(
   data,
   time_col,
   n = 1,
-  unit = c("sec", "min", "hour", "day", "year"),
+  unit = c("sec", "min", "hour", "day", "month", "quarter", "year"),
   verbose = TRUE
 )
 }
 \arguments{
-\item{data}{A \code{data.frame} with a timestamp column, sorted ascending.}
+\item{data}{A \code{data.frame}, \code{tibble}, or \code{tsibble} with a timestamp column,
+sorted ascending. tsibble and tibble are converted to \code{data.frame}
+automatically.}
 
 \item{time_col}{Character. Name of the timestamp column
-(must be \code{Date} or \code{POSIXct}). Use \code{\link[=combine_datetime]{combine_datetime()}} first if date
-and time are stored in separate columns.}
+(must be \code{Date} or \code{POSIXct}). Use \code{\link[=combine_datetime]{combine_datetime()}} first if
+date and time are stored in separate columns.}
 
-\item{n}{Numeric. Number of units per step. e.g. \code{1}, \code{15}, \code{30}.}
+\item{n}{Numeric. Number of units per step. e.g. \code{1}, \code{3}, \code{15}.}
 
-\item{unit}{Character. One of \code{"sec"}, \code{"min"}, \code{"hour"}, \code{"day"}, \code{"year"}.}
+\item{unit}{Character. One of \code{"sec"}, \code{"min"}, \code{"hour"}, \code{"day"},
+\code{"month"}, \code{"quarter"}, \code{"year"}.
+\itemize{
+\item \code{"month"}   - calendar months (1, 2, 3, ...)
+\item \code{"quarter"} - calendar quarters of 3 months each (Q1, Q2, Q3, Q4)
+}
+Note: \code{"month"} and \code{"quarter"} require the timestamp column to be \code{Date}
+and each value to fall on the first day of the month
+(e.g. \code{2024-01-01}, \code{2024-04-01}).}
 
 \item{verbose}{Logical (default \code{TRUE}).}
 }
@@ -36,7 +46,7 @@ Inserted rows have \code{NA} for all value columns.}
 (includes inserted rows).}
 \item{\code{gap_timestamps}}{Vector of timestamps that were inserted.}
 \item{\code{time_col}}{Name of the timestamp column.}
-\item{\code{freq}}{Frequency string used internally by \code{seq()}.}
+\item{\code{freq}}{Frequency string describing the step used.}
 }
 }
 \description{
@@ -46,10 +56,14 @@ Handles two types of missingness common in time-series:
 These rows are inserted with \code{NA} for all value columns.
 \item \strong{Missing values} - rows that exist but have \code{NA} in some columns.
 }
-After filling gaps the result is ready to pass into \code{missing_analysis()}
-and \code{\link[=handle_missing]{handle_missing()}}.
+After filling gaps the result is ready to pass into
+\code{\link[=missing_analysis]{missing_analysis()}} and \code{\link[=handle_missing]{handle_missing()}}.
+}
+\details{
+tsibble and tibble inputs are automatically converted to \code{data.frame}.
 }
 \examples{
+# Hourly data with a missing row
 df <- data.frame(
   datetime = as.POSIXct(c("2024-01-01 08:00:00",
                            "2024-01-01 09:00:00",
@@ -57,13 +71,21 @@ df <- data.frame(
   temp  = c(25.1, 25.4, 26.2),
   humid = c(80, NA, 85)
 )
-
-# Fill missing 10:00 row
 result <- fill_time_gaps(df, time_col = "datetime", n = 1, unit = "hour")
 result$data
-result$n_gaps
 
-# Every 15 minutes
-result2 <- fill_time_gaps(df, time_col = "datetime", n = 15, unit = "min")
+# Monthly data - missing February
+df_m <- data.frame(
+  date  = as.Date(c("2024-01-01", "2024-03-01", "2024-04-01")),
+  sales = c(100, 130, 150)
+)
+result_m <- fill_time_gaps(df_m, time_col = "date", n = 1, unit = "month")
+
+# Quarterly data - missing Q2
+df_q <- data.frame(
+  date  = as.Date(c("2024-01-01", "2024-07-01", "2024-10-01")),
+  sales = c(300, 420, 390)
+)
+result_q <- fill_time_gaps(df_q, time_col = "date", n = 1, unit = "quarter")
 
 }
