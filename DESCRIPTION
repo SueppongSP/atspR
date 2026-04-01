@@ -1,0 +1,28 @@
+Package: atspR
+Title: Automated Time-Series Preprocessing in R
+Version: 0.1.0
+Authors@R: 
+    person("Data", "Scientist", email = "ds@example.com", role = c("aut", "cre"))
+Description: An automated preprocessing framework for time-series data providing tools 
+    for missing value analysis, imputation (linear interpolation & KNN), 
+    temporal train/test splitting, feature scaling (Min-Max, Z-score, Robust), 
+    and k-fold cross-validation. Designed for time-series and tabular datasets 
+    with a clean, composable API and rich visual diagnostics.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports:
+    ggplot2 (>= 3.4.0),
+    rlang (>= 1.1.0),
+    zoo (>= 1.8.0)
+Suggests:
+    VIM (>= 6.2.0),
+    caret (>= 6.0.0),
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr
+URL: https://github.com/example/Automated-Time-Series-Preprocessing-in-R
+BugReports: https://github.com/example/Automated-Time-Series-Preprocessing-in-R/issues
+Config/testthat/edition: 3
