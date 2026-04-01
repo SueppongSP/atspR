@@ -44,44 +44,59 @@ devtools::install_github("SueppongSP/atspR")
 ```r
 library(atspR)
 
-# Step 1: Combine date + time
 df <- combine_datetime(my_data,
                        date_col  = "Date",
                        time_col  = "Time",
                        new_col   = "datetime",
                        time_type = "string")
 
-# Step 2: Fill missing timestamps
-gap <- fill_time_gaps(df, time_col = "datetime", n = 1, unit = "hour")
+gap <- fill_time_gaps(df, 
+                      time_col = "datetime", 
+                      n        = 1, 
+                      unit     = "hour")
 
-# Step 3: Run full pipeline
-result <- ts_preprocess(
-  data         = gap$data,
-  train_ratio  = 0.8,
-  scale_method = "minmax",
-  target_col   = "VPD",
-  k_folds      = 5L
-)
-
-# Results
-result$train_scaled   # scaled training set
-result$test_scaled    # scaled test set
-result$cv_summary     # cross-validation metrics
+result <- ts_preprocess(data         = gap$data,
+                        train_ratio  = 0.8,
+                        scale_method = "minmax",
+                        target_col   = "data_target",
+                        k_folds      = 5)
 ```
 
 ### Case 2: Datetime in one column
 
 ```r
-df$datetime <- as.POSIXct(df$datetime, format = "%Y-%m-%d %H:%M:%S")
-gap <- fill_time_gaps(df, time_col = "datetime", n = 1, unit = "hour")
-result <- ts_preprocess(data = gap$data, target_col = "temp")
+library(atspR)
+
+df$datetime <- as.POSIXct(df$datetime, 
+                          format = "%Y-%m-%d %H:%M:%S")
+                          
+gap <- fill_time_gaps(df, 
+                      time_col = "datetime", 
+                      n = 1, 
+                      unit = "hour")
+                      
+result <- ts_preprocess(data         = gap$data,
+                        train_ratio  = 0.8,
+                        scale_method = "minmax",
+                        target_col   = "data_target",
+                        k_folds      = 5)
 ```
 
 ### Case 3: Date only (daily data)
 
 ```r
-gap <- fill_time_gaps(df, time_col = "date", n = 1, unit = "day")
-result <- ts_preprocess(data = gap$data, target_col = "sales")
+library(atspR)
+
+gap <- fill_time_gaps(df, 
+                      time_col = "date", 
+                      n = 1, 
+                      unit = "day")
+                      
+result <- ts_preprocess(data         = gap$data,
+                        train_ratio  = 0.8,
+                        scale_method = "minmax",
+                        target_col   = "data_target",
+                        k_folds      = 5)
 ```
 
 ## Cross-Validation
@@ -103,7 +118,7 @@ Fold 3: train = seed + fold1+2    → val = fold3
 ## Export Results
 
 ```r
-ts_export(result, dir = "C:\Users\User\", prefix = "data")
+ts_export(result, dir = "C:\Users\user\", prefix = "data")
 ```
 
 ## Citation
