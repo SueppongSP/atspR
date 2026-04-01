@@ -110,7 +110,7 @@ ts_preprocess <- function(data,
   ana <- missing_analysis(data, plot = TRUE, verbose = FALSE)
   if (verbose) {
     miss_cols <- sum(ana$summary$n_missing > 0)
-    cat(sprintf("  [1/5] Missing analysis : %.2f%% overall  (%d columns affected)\n",
+    cat(sprintf("  [1/5] Missing Analysis : %.2f%% overall  (%d columns affected)\n",
                 ana$overall_pct * 100, miss_cols))
   }
 
@@ -118,11 +118,11 @@ ts_preprocess <- function(data,
   clean <- handle_missing(ana, method = impute_method, verbose = FALSE)
   if (verbose) {
     if (clean$action == "drop") {
-      cat(sprintf("  [2/5] Missing handling : DROP  %d rows removed  (%d -> %d)\n",
+      cat(sprintf("  [2/5] Missing Handling : REMOVE  %d rows removed  (%d -> %d)\n",
                   nrow(ana$data) - nrow(clean$data_clean),
                   nrow(ana$data), nrow(clean$data_clean)))
     } else {
-      cat(sprintf("  [2/5] Missing handling : IMPUTE (%s)  %d cells\n",
+      cat(sprintf("  [2/5] Missing Handling : IMPUTE (%s)  %d cells\n",
                   clean$method, clean$n_imputed))
     }
   }
