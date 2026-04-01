@@ -34,7 +34,7 @@ data to cross-validated, model-ready datasets.
 ```r
 # Install from GitHub
 # install.packages("devtools")
-devtools::install_github("example/Automated-Time-Series-Preprocessing-in-R")
+devtools::install_github("SueppongSP/atspR")
 ```
 
 ## Quick Start
