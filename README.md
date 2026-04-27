@@ -8,9 +8,23 @@
 
 ## Overview
 
-`atspR` is an R package that provides an automated, modular preprocessing
-framework for time-series data. It covers the full workflow from raw sensor
-data to cross-validated, model-ready datasets.
+
+`atspR` is an R package that provides an automated, modular preprocessing pipeline for time-series data — covering the full journey from raw sensor data to cross-validated, model-ready train and test sets.
+
+The package is designed for students and domain practitioners (agronomists, environmental scientists, irrigation engineers) who work primarily in R and need a reliable, leakage-free preprocessing workflow without having to manage multiple packages or worry about the correct sequencing of steps.
+
+### Why atspR?
+
+| Problem | How atspR solves it |
+|---|---|
+| Scalers applied before splitting → **data leakage** | Scaler fitted on **TRAIN only**, applied to both sets |
+| Random split invalidates time-series models | **Temporal split** — train always precedes test chronologically |
+| Silent NA removal with no record | Full report of what was dropped or imputed, and why |
+| Multi-package workflow, easy to sequence incorrectly | Single function `ts_preprocess()` runs all 7 steps in order |
+| Error messages with no guidance | Every automated decision explained in plain-language output |
+
+---
+
 
 ### Pipeline Steps
 
