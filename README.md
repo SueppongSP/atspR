@@ -34,7 +34,7 @@ Raw data
    ├─ combine_datetime()            Merge date + time columns → POSIXct
    ├─ fill_time_gaps()              Insert placeholder rows for missing timestamps
    │
-   └─ ts_preprocess()               ── 7 steps ──────────────────────────────────
+   └─ ts_preprocess()               ────────────────── 7 steps ──────────────────
    │    [1/7] standardize_na()      Convert sentinel values to NA
    │    [2/7] coerce_numeric()      Parse character columns to numeric
    │    [3/7] missing_analysis()    Summarise NAs; decide DROP or IMPUTE
