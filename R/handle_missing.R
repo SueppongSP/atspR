@@ -97,11 +97,9 @@ handle_missing <- function(analysis_result = NULL,
   if (do_impute) {
 
     if (verbose) {
-      .header("HANDLING MISSING VALUES")
-      cat(sprintf("  Rows            : %d\n", n_rows))
-      cat(sprintf("  Overall missing : %.2f%%\n", overall_pct * 100))
-      cat(sprintf("  Decision        : %s\n", decision_reason))
-      cat(sprintf("  Strategy        : IMPUTATION (%s)\n\n", method))
+      .header("STEP 4/7 : Handle Missing Values  [IMPUTE]")
+      cat(sprintf("  Method  : %s  |  Missing: %.2f%%\n", toupper(method), overall_pct * 100))
+      cat(sprintf("  Reason  : %s\n\n", decision_reason))
     }
 
     na_before  <- is.na(raw_data)
@@ -123,7 +121,19 @@ handle_missing <- function(analysis_result = NULL,
     )
 
     if (verbose) {
-      cat(sprintf("  Cells imputed : %d\n\n", n_imputed))
+      .subheader("Imputation result")
+      cat(sprintf("  Cells filled : %d\n", n_imputed))
+      imp_cols <- colSums(as.matrix(imputed_mask))
+      imp_cols <- imp_cols[imp_cols > 0]
+      if (length(imp_cols) > 0) {
+        imp_df <- data.frame(
+          column  = names(imp_cols),
+          imputed = as.integer(imp_cols),
+          stringsAsFactors = FALSE
+        )
+        print(imp_df[order(-imp_df$imputed), ], row.names = FALSE)
+      }
+      cat("\n")
     }
 
     # -- Branch: drop ----------------------------------------------------------
@@ -142,17 +152,12 @@ handle_missing <- function(analysis_result = NULL,
     )
 
     if (verbose) {
-      .header("HANDLING MISSING VALUES")
-      cat(sprintf("  Rows            : %d\n", n_rows))
-      cat(sprintf("  Overall missing : %.2f%%\n", overall_pct * 100))
-      cat(sprintf("  Decision        : %s\n", decision_reason))
-      cat(sprintf("  Strategy        : DROP rows with any NA\n"))
-      cat(sprintf("  Rows removed    : %d  (%d -> %d)\n\n",
-                  n_dropped, rows_before, nrow(data_clean)))
+      .header("STEP 4/7 : Handle Missing Values  [DROP]")
+      cat(sprintf("  Missing : %.2f%%  |  Reason: %s\n\n", overall_pct * 100, decision_reason))
+      cat(sprintf("  Rows before : %d  ->  after: %d  (-%d removed)\n\n",
+                  rows_before, nrow(data_clean), n_dropped))
     }
   }
-
-  if (verbose) cat("  ", report, "\n\n")
 
   invisible(list(
     data_clean   = data_clean,

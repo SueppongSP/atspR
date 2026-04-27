@@ -27,7 +27,8 @@
 #'   Default `0.8`.
 #' @param train_ratio Numeric in (0, 1). Default `0.8`.
 #' @param impute_method `"linear"` (default) or `"knn"`.
-#' @param scale_method `"minmax"` (default), `"zscore"`, or `"robust"`.
+#' @param scale_method `"auto"` (default) auto-selects based on outlier detection,
+#'   or one of `"minmax"`, `"zscore"`, `"robust"`.
 #' @param target_col Character. Response column for cross-validation.
 #'   If `NULL` (default), CV is skipped.
 #' @param k_folds Integer. Number of CV folds. Default `5`.
@@ -86,11 +87,14 @@ ts_preprocess <- function(data,
   .check_df(data)
 
   if (verbose) {
-    .header("atspR  |  AUTOMATED TIME SERIES PREPROCESSING")
-    cat(sprintf("  Rows: %d  |  Cols: %d  |  CV target: %s  (k = %d)\n\n",
+    .header("atspR  |  Automated Time Series Preprocessing")
+    cat(sprintf("  Input : %d rows, %d cols  |  Train/Test: %.0f%%/%.0f%%  |  Impute: %s  |  Scale: %s\n",
                 nrow(data), ncol(data),
-                if (!is.null(target_col)) target_col else "none",
-                k_folds))
+                train_ratio * 100, (1 - train_ratio) * 100,
+                impute_method, scale_method))
+    cat(sprintf("  CV    : target = %s,  k = %d\n",
+                if (!is.null(target_col)) target_col else "none (skipped)", k_folds))
+    cat(strrep("-", 60), "\n", sep = "")
   }
 
   # Step 1: Standardise missing indicators
@@ -108,44 +112,82 @@ ts_preprocess <- function(data,
 
   # Step 3: Missing analysis
   ana <- missing_analysis(data, plot = TRUE, verbose = FALSE)
-  if (verbose) {
-    miss_cols <- sum(ana$summary$n_missing > 0)
-    cat(sprintf("  [1/5] Missing Analysis : %.2f%% overall  (%d columns affected)\n",
-                ana$overall_pct * 100, miss_cols))
-  }
 
   # Step 4: Handle missing
   clean <- handle_missing(ana, method = impute_method, verbose = FALSE)
-  if (verbose) {
-    if (clean$action == "drop") {
-      cat(sprintf("  [2/5] Missing Handling : REMOVE  %d rows removed  (%d -> %d)\n",
-                  nrow(ana$data) - nrow(clean$data_clean),
-                  nrow(ana$data), nrow(clean$data_clean)))
-    } else {
-      cat(sprintf("  [2/5] Missing Handling : IMPUTE (%s)  %d cells\n",
-                  clean$method, clean$n_imputed))
-    }
-  }
 
   # Step 5: Visualise
   viz <- visualize_data(clean, raw_data = data, verbose = FALSE)
-  if (verbose) {
-    n_pages <- length(viz$scatter_plots)
-    cat(sprintf("  [3/5] Visualise        : %d page(s) plotted\n", n_pages))
-  }
 
   # Step 6: Split
   sp <- split_data(clean$data_clean, train_ratio = train_ratio, verbose = FALSE)
-  if (verbose) {
-    cat(sprintf("  [4/5] Split            : Train %d rows  |  Test %d rows\n",
-                nrow(sp$train), nrow(sp$test)))
-  }
 
   # Step 7: Scale
   sc <- scale_data(sp, method = scale_method, verbose = FALSE)
+
+  # -- Print unified pipeline summary ----------------------------------------
   if (verbose) {
-    cat(sprintf("  [5/5] Scale            : %s  |  %d columns\n\n",
-                scale_method, length(sc$cols)))
+    miss_cols  <- sum(ana$summary$n_missing > 0)
+    n_orig     <- nrow(ana$data)
+    n_clean    <- nrow(clean$data_clean)
+
+    # Step 1: Missing Analysis
+    miss_reason <- if (n_orig <= 50) {
+      sprintf("n = %d <= 50, always impute", n_orig)
+    } else if (ana$overall_pct > 0.05) {
+      sprintf("missing = %.2f%% > 5%% threshold", ana$overall_pct * 100)
+    } else {
+      sprintf("missing = %.2f%% <= 5%% threshold, safe to drop", ana$overall_pct * 100)
+    }
+    miss_action <- if (clean$action == "drop") "DROP" else paste0("IMPUTE (", toupper(clean$method), ")")
+
+    cat(sprintf("  [1/7] Standardise NA indicators  -- done\n\n"))
+
+    cat(sprintf("  [2/7] Coerce character cols to numeric  -- done\n\n"))
+
+    cat(sprintf("  [3/7] Missing Value Analysis\n"))
+    cat(sprintf("        %.2f%%  |  %d / %d cols  |  %s  -- %s\n\n",
+                ana$overall_pct * 100, miss_cols, ncol(data), miss_action, miss_reason))
+
+    cat(sprintf("  [4/7] Handle Missing Values\n"))
+    if (clean$action == "drop") {
+      cat(sprintf("        %d -> %d rows  (-%d dropped)\n\n",
+                  n_orig, n_clean, n_orig - n_clean))
+    } else {
+      cat(sprintf("        %d cells imputed", clean$n_imputed))
+      imp_cols <- colSums(as.matrix(clean$imputed_mask))
+      imp_cols <- sort(imp_cols[imp_cols > 0], decreasing = TRUE)
+      if (length(imp_cols) > 0)
+        cat(sprintf("  [%s]",
+                    paste(sprintf("%s:%d", names(imp_cols), imp_cols), collapse = "  ")))
+      cat("\n\n")
+    }
+
+    cat(sprintf("  [5/7] Visualise\n"))
+    cat(sprintf("        %d scatter page(s) generated\n\n", length(viz$scatter_plots)))
+
+    cat(sprintf("  [6/7] Train / Test Split\n"))
+    cat(sprintf("        Train: %d rows (%.0f%%)  |  Test: %d rows (%.0f%%)\n\n",
+                nrow(sp$train), nrow(sp$train) / n_clean * 100,
+                nrow(sp$test),  nrow(sp$test)  / n_clean * 100))
+
+    avg_out  <- mean(sc$outlier_ratio) * 100
+    out_cols <- sc$outlier_ratio[sc$outlier_ratio > 0]
+    cat(sprintf("  [7/7] Feature Scaling  [%s]\n", toupper(sc$method)))
+    if (!is.null(sc$method_reason))
+      cat(sprintf("        %s\n", sc$method_reason))
+    if (length(out_cols) > 0) {
+      out_sorted <- sort(out_cols, decreasing = TRUE)
+      cat(sprintf("        Outliers: %s\n",
+                  paste(sprintf("%s(%.1f%%)", names(out_sorted), out_sorted * 100),
+                        collapse = "  ")))
+      high_out <- out_sorted[out_sorted >= 0.10]
+      if (length(high_out) > 0 && toupper(sc$method) != "ROBUST")
+        cat(sprintf("        [!] %s >= 10%% -- consider scale_method = \"robust\"\n",
+                    paste(names(high_out), collapse = ", ")))
+    }
+    cat("\n")
+    cat(strrep("-", 60), "\n", sep = "")
   }
 
   # Step 8: Cross-validate (optional)

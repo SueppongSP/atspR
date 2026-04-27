@@ -36,7 +36,8 @@ Default \code{0.8}.}
 
 \item{impute_method}{\code{"linear"} (default) or \code{"knn"}.}
 
-\item{scale_method}{\code{"minmax"} (default), \code{"zscore"}, or \code{"robust"}.}
+\item{scale_method}{\code{"auto"} (default) auto-selects based on outlier detection,
+or one of \code{"minmax"}, \code{"zscore"}, \code{"robust"}.}
 
 \item{target_col}{Character. Response column for cross-validation.
 If \code{NULL} (default), CV is skipped.}

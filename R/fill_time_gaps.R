@@ -202,25 +202,35 @@ fill_time_gaps <- function(data,
                          year    = "year(s)"
     )
 
-    .header("TIME GAP ANALYSIS & FILL")
-    cat(sprintf("  Timestamp column : %s\n",          time_col))
-    cat(sprintf("  Frequency        : every %g %s\n", n, unit_label))
+    .header("STEP : Check and Fill Missing Timestamps")
+    cat(sprintf("  Frequency  : every %g %s\n", n, unit_label))
     if (unit == "quarter")
-      cat(sprintf("  (1 quarter = 3 months, step = %d months)\n",
-                  months_per_step))
-    cat(sprintf("  Expected steps   : %d\n",          length(full_seq)))
-    cat(sprintf("  Actual rows      : %d\n",          nrow(data)))
-    cat(sprintf("  Gaps inserted    : %d rows\n",     n_gaps))
-    cat(sprintf("  NA cells before  : %d\n",          n_na_before))
-    cat(sprintf("  NA cells after   : %d  (includes inserted rows)\n\n",
-                n_na_after))
+      cat(sprintf("  (1 quarter = 3 months)\n"))
+    cat(sprintf("  Expected   : %d rows\n", length(full_seq)))
+    cat(sprintf("  Found      : %d rows\n", nrow(data)))
+    cat(sprintf("  Gaps       : %d rows inserted\n\n", n_gaps))
+
+    na_from_gaps <- n_gaps * length(val_cols)
+    na_preexist  <- n_na_before
+    cat(sprintf("  NA before  : %d\n", n_na_before))
+    cat(sprintf("  NA after   : %d\n", n_na_after))
+    if (n_gaps > 0) {
+      cat(sprintf("    └─ inserted rows  : %d x %d cols = %d  (filled in next step)\n",
+                  n_gaps, length(val_cols), na_from_gaps))
+      cat(sprintf("    └─ pre-existing   : %d\n", na_preexist))
+    }
+    cat("\n")
 
     if (n_gaps > 0) {
-      .subheader("Inserted Timestamps (first 10)")
-      print(utils::head(gap_timestamps, 10))
-      cat("\n")
+      show_n <- min(10L, n_gaps)
+      .subheader(sprintf("Inserted timestamps (%d of %d)", show_n, n_gaps))
+      print(utils::head(gap_timestamps, show_n))
+      if (n_gaps > show_n)
+        cat(sprintf("  ... and %d more\n", n_gaps - show_n))
+      cat("\n  >> Next: ts_preprocess(gap$data, ...)\n\n")
     } else {
-      cat("  [OK] No missing timestamps found.\n\n")
+      cat("  [OK] No gaps found\n\n")
+      cat("  >> Next: ts_preprocess()\n\n")
     }
   }
 

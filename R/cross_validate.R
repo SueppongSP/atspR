@@ -1,6 +1,6 @@
 # =============================================================================
 # atspR/R/cross_validate.R
-# Step 6 – K-fold cross-validation on the training set
+# Step 6 - K-fold cross-validation on the training set
 # =============================================================================
 
 #' K-Fold Cross-Validation on the Training Set
@@ -54,14 +54,14 @@ cross_validate <- function(scale_result   = NULL,
                            min_train_size = 0.2,
                            verbose        = TRUE) {
 
-  # ── Force k to integer ────────────────────────────────────────────────────
+  # -- Force k to integer ----------------------------------------------------
   k <- as.integer(k)
 
-  # ── Validate min_train_size ───────────────────────────────────────────────
+  # -- Validate min_train_size -----------------------------------------------
   if (!is.numeric(min_train_size) || min_train_size <= 0 || min_train_size >= 1)
     rlang::abort("`min_train_size` must be a number strictly between 0 and 1.")
 
-  # ── Resolve training data ─────────────────────────────────────────────────
+  # -- Resolve training data -------------------------------------------------
   if (!is.null(scale_result)) {
     train_data <- scale_result$train_scaled
   } else if (!is.null(train)) {
@@ -78,7 +78,7 @@ cross_validate <- function(scale_result   = NULL,
   if (k < 2L || k > nrow(train_data))
     rlang::abort(sprintf("`k` must be between 2 and nrow(train) = %d.", nrow(train_data)))
 
-  # ── แบ่ง seed train vs fold region ───────────────────────────────────────
+  # -- Split seed train vs fold region ------------------------------------
   n         <- nrow(train_data)
   seed_n    <- max(1L, floor(n * min_train_size))
   seed_data <- train_data[seq_len(seed_n), , drop = FALSE]
@@ -93,10 +93,10 @@ cross_validate <- function(scale_result   = NULL,
 
   fold_id <- cut(seq_len(n_fold), breaks = k, labels = FALSE)
 
-  # ── Track whether model is default ───────────────────────────────────────
+  # -- Track whether model is default ---------------------------------------
   is_default_model <- is.null(model_fn)
 
-  # ── Default model: OLS linear regression ─────────────────────────────────
+  # -- Default model: OLS linear regression ---------------------------------
   if (is_default_model) {
     model_fn <- function(train_fold, val_fold) {
       fmla <- stats::as.formula(paste(target_col, "~ ."))
@@ -120,15 +120,21 @@ cross_validate <- function(scale_result   = NULL,
   }
 
   if (verbose) {
-    .header(paste0("K-FOLD CROSS-VALIDATION  (k = ", k, ")"))
-    .subheader("Fold Results")
+    .header(paste0("STEP : Walk-Forward Cross-Validation  (k = ", k, ")"))
+    cat(sprintf("  Target : %s  |  Seed: %d rows (%.0f%%)  |  Folds: %d (~%d rows each)\n\n",
+                target_col, seed_n, min_train_size * 100, k, floor(n_fold / k)))
+    .subheader("Results per fold")
+    cat("  RMSE / MAE = error (lower is better)  |  R2 = fit (closer to 1.0 is better)\n\n")
+    cat(sprintf("  %-6s  %-10s  %-8s  %-8s  %-8s  %-8s\n",
+                "Fold", "n_train", "n_val", "RMSE", "MAE", "R2"))
+    cat(sprintf("  %s\n", strrep("-", 56)))
   }
 
   fold_results <- vector("list", k)
 
   for (i in seq_len(k)) {
 
-    # ── Walk-forward: seed + fold ที่อยู่ก่อน i ──────────────────────────
+    # -- Walk-forward: seed + all prior folds ----------------------------
     prior_fold_idx <- which(fold_id < i)
     val_idx        <- which(fold_id == i)
 
@@ -136,7 +142,7 @@ cross_validate <- function(scale_result   = NULL,
       prior_rows <- fold_data[prior_fold_idx, , drop = FALSE]
       fold_train <- rbind(seed_data, prior_rows)
     } else {
-      fold_train <- seed_data   # fold 1: train = seed เท่านั้น
+      fold_train <- seed_data   # fold 1: train = seed only
     }
 
     fold_val <- fold_data[val_idx, , drop = FALSE]
@@ -154,10 +160,20 @@ cross_validate <- function(scale_result   = NULL,
                            n_val   = length(val_idx),
                            metrics)
 
+    if (verbose) {
+      m <- as.list(metrics)
+      cat(sprintf("  %-6d  %-10d  %-8d  %-8s  %-8s  %-8s\n",
+                  i,
+                  nrow(fold_train),
+                  length(val_idx),
+                  if (!is.null(m$RMSE) && !is.na(m$RMSE)) sprintf("%.4f", m$RMSE) else "  NA  ",
+                  if (!is.null(m$MAE)  && !is.na(m$MAE))  sprintf("%.4f", m$MAE)  else "  NA  ",
+                  if (!is.null(m$R2)   && !is.na(m$R2))   sprintf("%.4f", m$R2)   else "  NA  "))
+    }
 
-  }
+  }  # end for loop
 
-  # ── Remove NULL entries ───────────────────────────────────────────────────
+  # -- Remove NULL entries ---------------------------------------------------
   fold_results <- Filter(Negate(is.null), fold_results)
 
   fold_df <- as.data.frame(do.call(rbind, lapply(fold_results, function(x)
@@ -168,7 +184,7 @@ cross_validate <- function(scale_result   = NULL,
 
   k_evaluated <- nrow(fold_df)
 
-  # ── Summary statistics ────────────────────────────────────────────────────
+  # -- Summary statistics ----------------------------------------------------
   summary_df <- do.call(rbind, lapply(metric_cols, function(m) {
     vals <- fold_df[[m]]
     data.frame(metric = m,
@@ -179,8 +195,8 @@ cross_validate <- function(scale_result   = NULL,
                stringsAsFactors = FALSE)
   }))
 
-  # ── สร้าง fold_df พร้อมแถว Mean ต่อท้าย ─────────────────────────────────
-  # เลือกเฉพาะ fold + metric (ไม่เอา n_train, n_val)
+  # -- Build fold_df with Mean row appended --------------------------------
+  # Keep fold + metric columns only (drop n_train, n_val)
   show_cols <- c("fold", metric_cols)
 
   fold_df_show <- fold_df[, show_cols, drop = FALSE]
@@ -204,9 +220,21 @@ cross_validate <- function(scale_result   = NULL,
   fold_df_display <- rbind(fold_df_show, mean_row)
 
   if (verbose) {
-    print(fold_df_display, row.names = FALSE)
     cat("\n")
-    cat(sprintf("  Folds evaluated : %d / %d\n\n", k_evaluated, k))
+    .subheader(paste0("Summary  (", k_evaluated, "/", k, " folds)"))
+    cat("  mean = avg across folds  |  sd = consistency (lower = more stable)\n\n")
+    cat(sprintf("  %-8s  %-8s  %-8s  %-8s  %-8s\n", "metric", "mean", "sd", "min", "max"))
+    cat(sprintf("  %s\n", strrep("-", 46)))
+    for (i in seq_len(nrow(summary_df))) {
+      r <- summary_df[i, ]
+      cat(sprintf("  %-8s  %-8s  %-8s  %-8s  %-8s\n",
+                  r$metric,
+                  sprintf("%.4f", r$mean),
+                  sprintf("%.4f", r$sd),
+                  sprintf("%.4f", r$min),
+                  sprintf("%.4f", r$max)))
+    }
+    cat("\n")
   }
 
   invisible(list(

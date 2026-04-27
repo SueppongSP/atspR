@@ -131,28 +131,28 @@ combine_datetime <- function(data,
   # ── Build time string ─────────────────────────────────────────────────────
   time_str <- switch(time_type,
 
-    hour = {
-      h <- as.integer(data[[time_col]])
-      if (any(h < 0 | h > 23, na.rm = TRUE))
-        rlang::abort("Hour values must be between 0 and 23.")
-      sprintf("%02d:00:00", h)
-    },
+                     hour = {
+                       h <- as.integer(data[[time_col]])
+                       if (any(h < 0 | h > 23, na.rm = TRUE))
+                         rlang::abort("Hour values must be between 0 and 23.")
+                       sprintf("%02d:00:00", h)
+                     },
 
-    hhmm = {
-      v <- as.integer(data[[time_col]])
-      h <- v %/% 100
-      m <- v %%  100
-      if (any(h < 0 | h > 23, na.rm = TRUE))
-        rlang::abort("Hour part of HHMM must be between 0 and 23.")
-      if (any(m < 0 | m > 59, na.rm = TRUE))
-        rlang::abort("Minute part of HHMM must be between 0 and 59.")
-      sprintf("%02d:%02d:00", h, m)
-    },
+                     hhmm = {
+                       v <- as.integer(data[[time_col]])
+                       h <- v %/% 100
+                       m <- v %%  100
+                       if (any(h < 0 | h > 23, na.rm = TRUE))
+                         rlang::abort("Hour part of HHMM must be between 0 and 23.")
+                       if (any(m < 0 | m > 59, na.rm = TRUE))
+                         rlang::abort("Minute part of HHMM must be between 0 and 59.")
+                       sprintf("%02d:%02d:00", h, m)
+                     },
 
-    string = {
-      t <- trimws(as.character(data[[time_col]]))
-      ifelse(nchar(t) == 5, paste0(t, ":00"), t)
-    }
+                     string = {
+                       t <- trimws(as.character(data[[time_col]]))
+                       ifelse(nchar(t) == 5, paste0(t, ":00"), t)
+                     }
   )
 
   # ── Combine → POSIXct ─────────────────────────────────────────────────────
@@ -171,18 +171,13 @@ combine_datetime <- function(data,
 
   # ── Console output ────────────────────────────────────────────────────────
   if (verbose) {
-    .header("COMBINE DATE + TIME COLUMNS")
-    cat(sprintf("  Date column : %s\n", date_col))
-    cat(sprintf("  Date format : %s  %s\n",
-                date_format,
-                ifelse(detected_auto, "(auto-detected)", "(user-supplied)")))
-    cat(sprintf("  Time column : %s  (type: %s)\n", time_col, time_type))
-    cat(sprintf("  New column  : %s  (tz: %s)\n",   new_col,  tz))
-    cat(sprintf("  Remove originals : %s\n\n",
-                ifelse(drop_cols, "yes", "no")))
-    cat("  Sample output:\n")
-    print(utils::head(data[[new_col]], 5))
-    cat("\n")
+    .header("STEP : Combine Date + Time into One Column")
+    cat(sprintf("  Date column : %s  (format: %s %s)\n",
+                date_col, date_format,
+                ifelse(detected_auto, "[auto]", "[user]")))
+    cat(sprintf("  New column  : %s  (tz: %s)\n", new_col, tz))
+    cat(sprintf("  Sample      : %s\n\n", format(data[[new_col]][1])))
+    cat("  >> Next: fill_time_gaps()\n\n")
   }
 
   data

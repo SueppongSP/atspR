@@ -2,11 +2,12 @@
 % Please edit documentation in R/scale_data.R
 \name{scale_data}
 \alias{scale_data}
-\title{Scale Numeric Features}
+\title{Scale Numeric Features (Auto-Select Method)}
 \usage{
 scale_data(
   split_result,
-  method = c("minmax", "zscore", "robust"),
+  method = "auto",
+  outlier_threshold = 0.05,
   cols = NULL,
   verbose = TRUE
 )
@@ -14,10 +15,13 @@ scale_data(
 \arguments{
 \item{split_result}{The list returned by \code{\link[=split_data]{split_data()}}.}
 
-\item{method}{Character.  One of \code{"minmax"} (default), \code{"zscore"}, or
-\code{"robust"}.}
+\item{method}{Character. One of \code{"auto"} (default), \code{"minmax"},
+\code{"zscore"}, or \code{"robust"}. Use \code{"auto"} to let the function choose.}
 
-\item{cols}{Character vector.  Names of numeric columns to scale.
+\item{outlier_threshold}{Numeric in (0, 1). Fraction of outliers per
+column above which \code{"robust"} is selected. Default \code{0.05} (5\%).}
+
+\item{cols}{Character vector. Names of numeric columns to scale.
 \code{NULL} (default) scales all numeric columns.}
 
 \item{verbose}{Logical (default \code{TRUE}).}
@@ -27,9 +31,10 @@ An invisible list with elements:
 \describe{
 \item{\code{train_scaled}}{Scaled training \code{data.frame}.}
 \item{\code{test_scaled}}{Scaled test \code{data.frame}.}
-\item{\code{params}}{A named list of per-column scaling parameters
-(fitted on train only).}
+\item{\code{params}}{Per-column scaling parameters (fitted on train only).}
 \item{\code{method}}{The scaling method used.}
+\item{\code{method_reason}}{Why the method was selected (auto mode only).}
+\item{\code{outlier_ratio}}{Named numeric vector of outlier ratios per column.}
 \item{\code{cols}}{Character vector of scaled column names.}
 }
 }
@@ -37,14 +42,22 @@ An invisible list with elements:
 Fits a scaler on the \strong{training} set and applies the same parameters
 to both train and test sets, preventing data leakage.
 }
+\details{
+When \code{method = "auto"} (default), the scaling method is chosen
+automatically based on outlier detection (IQR method) and a normality
+test (Shapiro-Wilk):
+\itemize{
+\item \strong{robust}  -- outliers detected in >= 5\% of values per column
+\item \strong{zscore}  -- no outliers + data approximately normal
+\item \strong{minmax}  -- no outliers + data not normal
+}
+}
 \section{Methods}{
 
 \describe{
-\item{\code{minmax}}{Scales each feature to \eqn{[0, 1]} using
-\eqn{(x - \min) / (\max - \min)}.}
+\item{\code{minmax}}{Scales each feature to \eqn{[0, 1]}.}
 \item{\code{zscore}}{Standardises to zero mean and unit variance.}
-\item{\code{robust}}{Uses median and IQR, robust to outliers:
-\eqn{(x - \text{median}) / \text{IQR}}.}
+\item{\code{robust}}{Uses median and IQR, robust to outliers.}
 }
 }
 
@@ -52,7 +65,8 @@ to both train and test sets, preventing data leakage.
 data(airquality)
 clean <- airquality[complete.cases(airquality), ]
 sp    <- split_data(clean, verbose = FALSE)
-sc    <- scale_data(sp, method = "minmax")
-summary(sc$train_scaled)
+sc    <- scale_data(sp)
+sc$method
+sc$method_reason
 
 }
