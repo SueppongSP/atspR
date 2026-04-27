@@ -26,22 +26,29 @@ The package is designed for students and domain practitioners (agronomists, envi
 ---
 
 
-### Pipeline Steps
+## Pipeline
 
-| Step | Function | Description |
-|------|----------|-------------|
-| 0 | `standardize_na()` | Convert custom missing indicators to `NA` |
-| 0 | `coerce_numeric()` | Auto-convert character columns to numeric |
-| 0 | `combine_datetime()` | Merge separate date + time columns → `POSIXct` |
-| 0 | `fill_time_gaps()` | Insert missing timestamps in time-series |
-| 1 | `missing_analysis()` | Analyse missing values & draw boxplots |
-| 2 | `handle_missing()` | Drop rows or impute (linear / KNN) |
-| 3 | `visualize_data()` | Scatter plots per variable vs index |
-| 4 | `split_data()` | Temporal train / test split |
-| 5 | `scale_data()` | Feature scaling (Min-Max / Z-score / Robust) |
-| 6 | `cross_validate()` | Walk-forward k-fold cross-validation |
-| — | `ts_preprocess()` | Run all steps in one call |
-| — | `export_pipeline()` | Export results to CSV |
+```
+Raw data
+   │
+   ├─ combine_datetime()            Merge date + time columns → POSIXct
+   ├─ fill_time_gaps()              Insert placeholder rows for missing timestamps
+   │
+   └─ ts_preprocess()      ── 7 steps ──────────────────────────────────
+   │    [1/7] standardize_na()      Convert sentinel values to NA
+   │    [2/7] coerce_numeric()      Parse character columns to numeric
+   │    [3/7] missing_analysis()    Summarise NAs; decide DROP or IMPUTE
+   │    [4/7] handle_missing()      Drop rows or interpolate (linear/KNN)
+   │    [5/7] visualize_data()      Scatter plots per variable vs time
+   │    [6/7] split_data()          Temporal train/test split
+   │    [7/7] scale_data()          MinMax / Z-score / Robust (auto)
+   │        │
+   │        └─ cross_validate()     Walk-forward k-fold CV (optional)
+   │
+   └─ ts_export()                   Write all outputs to CSV
+```
+
+---
 
 ## Installation
 
