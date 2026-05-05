@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # =============================================================================
 # atspR/R/handle_missing.R
 # Step 2 - Impute or drop missing values
@@ -202,7 +201,6 @@ handle_missing <- function(analysis_result = NULL,
   imputed <- VIM::kNN(data, k = k, imp_var = FALSE)
   as.data.frame(imputed)
 }
-=======
 # =============================================================================
 # atspR/R/handle_missing.R
 # Step 2 - Impute or drop missing values
@@ -401,4 +399,3 @@ handle_missing <- function(analysis_result = NULL,
   imputed <- VIM::kNN(data, k = k, imp_var = FALSE)
   as.data.frame(imputed)
 }
->>>>>>> 6658fd2c81ddea73e2bf221e33788b633d007a67
